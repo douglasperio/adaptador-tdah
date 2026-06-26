@@ -1,1 +1,8 @@
-fastapi==0.115.0`nuvicorn==0.30.6`npython-multipart==0.0.9`nanthropic==0.26.0`npypdf==4.3.1`nreportlab==4.2.2`nhttpx==0.24.1`nanyio==3.7.1
+﻿fastapi==0.115.0
+uvicorn==0.30.6
+python-multipart==0.0.9
+anthropic==0.26.0
+pypdf==4.3.1
+reportlab==4.2.2
+httpx==0.24.1
+anyio==3.7.1
