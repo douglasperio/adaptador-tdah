@@ -79,10 +79,15 @@ function pJust(t) {
   return new Paragraph({ spacing: { before: 0, after: 80, ...lh() },
     children: [new TextRun({ text: t, size: 22, color: CINZA, font: "Arial" })] });
 }
+function pSpacer() {
+  return new Paragraph({ spacing: { before: 60, after: 60, line: 240, lineRule: "auto" },
+    children: [new TextRun({ text: "", size: 24 })] });
+}
 
 async function main() {
   const args = process.argv.slice(2);
-  const titulo = args[1] || "AVIN — 2026-1";
+  const pathSaida  = args[0];
+  const titulo     = args[1] || "AVIN — 2026-1";
   const comGabarito = args.includes("--com-gabarito");
 
   let raw = "";
@@ -109,6 +114,7 @@ async function main() {
     }
     children.push(pLabel("Pergunta"));
     children.push(pPergunta(q.pergunta));
+    children.push(pSpacer());
     for (const [l, t] of q.alternativas) children.push(pAlt(l, t));
     if (comGabarito) {
       children.push(pGab(q.gabarito));
@@ -127,8 +133,8 @@ async function main() {
   });
 
   const buf = await Packer.toBuffer(doc);
-  // Imprimir bytes como hex para o Python ler
-  process.stdout.write(buf.toString("hex"));
+  require('fs').writeFileSync(pathSaida, buf);
+  process.stdout.write("ok");
 }
 
 main().catch(e => { process.stderr.write(e.message); process.exit(1); });

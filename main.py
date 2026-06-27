@@ -175,8 +175,8 @@ def gerar_pdf(questoes: list[dict], titulo: str, com_gabarito: bool,
     s_area   = e("a",  tam=FS-1, cor=AZUL,  bold=True, ea=14, ed=2)
     s_num    = e("n",  tam=FS+1, cor=AZUL,  bold=True, ea=10, ed=4)
     s_label  = e("lb", tam=FS-1, cor=AZUL,  bold=True, ea=6,  ed=2)
-    s_corpo  = e("c",  tam=FS,   cor=PRETO, ea=0, ed=4)
-    s_alt    = e("al", tam=FS,   cor=PRETO, ea=3, ed=3, ind=16)
+    s_corpo  = e("c",  tam=FS,   cor=PRETO, ea=0, ed=8)
+    s_alt    = e("al", tam=FS,   cor=PRETO, ea=0, ed=6, ind=16)
     s_gab    = e("g",  tam=FS,   cor=VERDE, bold=True, ea=8, ed=2)
     s_jl     = e("jl", tam=FS-1, cor=CINZA, bold=True, ea=4, ed=2)
     s_just   = e("j",  tam=FS-1, cor=CINZA, ea=0, ed=3)
@@ -236,9 +236,10 @@ def gerar_pdf(questoes: list[dict], titulo: str, com_gabarito: bool,
         story.append(Spacer(1, 4))
         story.append(Paragraph("Pergunta", s_label))
         story.append(Paragraph(q["pergunta"], s_corpo))
-        story.append(Spacer(1, 4))
+        story.append(Spacer(1, 8))
         for letra, texto in q["alternativas"]:
             story.append(Paragraph(f"<b>{letra})</b>  {texto}", s_alt))
+            story.append(Spacer(1, 2))
         if com_gabarito:
             story.append(Spacer(1, 6))
             story.append(Paragraph(f"Gabarito: {q['gabarito']}", s_gab))
@@ -255,15 +256,22 @@ def gerar_pdf(questoes: list[dict], titulo: str, com_gabarito: bool,
 # ── GERAÇÃO DE DOCX ───────────────────────────────────────────────────────────
 
 def gerar_docx(questoes: list[dict], titulo: str) -> bytes:
+    import tempfile, os
     script = Path(__file__).parent / "gerar_docx.js"
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
+    tmp.close()
     proc = subprocess.run(
-        ["node", str(script), "-", titulo],
+        ["node", str(script), tmp.name, titulo],
         input=json.dumps(questoes, ensure_ascii=False),
         capture_output=True, text=True, encoding="utf-8", timeout=60
     )
     if proc.returncode != 0:
+        os.unlink(tmp.name)
         raise RuntimeError(f"Erro no DOCX: {proc.stderr}")
-    return bytes.fromhex(proc.stdout.strip())
+    with open(tmp.name, "rb") as f:
+        content = f.read()
+    os.unlink(tmp.name)
+    return content
 
 
 # ── ROTAS ─────────────────────────────────────────────────────────────────────
