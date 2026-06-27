@@ -21,8 +21,8 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import (HRFlowable, Paragraph, SimpleDocTemplate,
-                                Spacer, Table, TableStyle)
+from reportlab.platypus import (HRFlowable, KeepTogether, Paragraph,
+                                SimpleDocTemplate, Spacer, Table, TableStyle)
 
 app = FastAPI(title="Adaptador TDAH — Unilavras")
 
@@ -120,18 +120,30 @@ def parsear_questoes(texto: str) -> list[dict]:
                 continue
             if linha.startswith("NÚMERO:"):
                 q["numero"] = linha.replace("NÚMERO:", "").strip()
-            elif linha.startswith("ÁREA:"):
+                continue
+            if linha.startswith("ÁREA:"):
                 q["area"] = linha.replace("ÁREA:", "").strip()
-            elif linha == "**Dados do Caso**":
+                continue
+            if linha == "**Dados do Caso**":
                 secao = "dados"
-            elif linha == "**Pergunta**":
+                continue
+            if linha == "**Pergunta**":
                 secao = "pergunta"
-            elif linha.startswith("**Gabarito:**"):
+                continue
+            if linha.startswith("**Gabarito:**"):
                 q["gabarito"] = linha.replace("**Gabarito:**", "").strip()
-                secao = None
-            elif linha == "**Justificativa:**":
+                secao = "gabarito"
+                continue
+            if linha == "**Justificativa:**":
                 secao = "justificativa"
-            elif secao == "dados":
+                continue
+            # Alternativas detectadas em qualquer seção
+            m_alt = re.match(r"^([A-E])\)\s*(.*)", linha)
+            if m_alt:
+                secao = "alternativas"
+                q["alternativas"].append([m_alt.group(1), m_alt.group(2).strip()])
+                continue
+            if secao == "dados":
                 m = re.match(r"^\*\*([^*]+):\*\*\s*(.*)", linha)
                 if m:
                     q["dados"].append([m.group(1), m.group(2).strip()])
@@ -139,11 +151,6 @@ def parsear_questoes(texto: str) -> list[dict]:
                 q["pergunta"] += (" " if q["pergunta"] else "") + linha
             elif secao == "justificativa":
                 q["justificativa"] += (" " if q["justificativa"] else "") + linha
-            else:
-                m = re.match(r"^([A-E])\)\s*(.*)", linha)
-                if m:
-                    secao = "alternativas"
-                    q["alternativas"].append([m.group(1), m.group(2).strip()])
         if q["numero"] or q["pergunta"]:
             questoes.append(q)
     return questoes
@@ -236,10 +243,13 @@ def gerar_pdf(questoes: list[dict], titulo: str, com_gabarito: bool,
         story.append(Spacer(1, 4))
         story.append(Paragraph("Pergunta", s_label))
         story.append(Paragraph(q["pergunta"], s_corpo))
-        story.append(Spacer(1, 8))
+        story.append(Spacer(1, 10))
+        alts = []
         for letra, texto in q["alternativas"]:
-            story.append(Paragraph(f"<b>{letra})</b>  {texto}", s_alt))
-            story.append(Spacer(1, 2))
+            alts.append(Paragraph(f"<b>{letra})</b>  {texto}", s_alt))
+            alts.append(Spacer(1, 4))
+        story.extend(alts)
+        story.append(Spacer(1, 4))
         if com_gabarito:
             story.append(Spacer(1, 6))
             story.append(Paragraph(f"Gabarito: {q['gabarito']}", s_gab))
